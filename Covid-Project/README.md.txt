@@ -1,0 +1,2 @@
+This is a web base project that illustrates the dates in the CVS file and gives us a better understanding of the data. 
+To use the code you need to download the file of our data to be able to show the graphs.
