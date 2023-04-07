@@ -1,0 +1,280 @@
+---
+title: "Project 1"
+author: "Aria Saboonchi"
+date: "2023-03-24"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Importing data**
+
+First thing we need to do is to import the data sets we want to work with which is the data we have from the COVID-19 pandemic
+our data set contains counties, dates, new cases, total deaths, total cases and etc.
+The source of the data is from [Our World in Data](https://ourworldindata.org/covid-deaths) website.
+
+```{r, echo=TRUE}
+my_data <- read.csv("owid-covid-data.csv")
+
+url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv"
+vaccination_data <- read.csv(url)
+```
+
+**Importing libraries**
+
+Now we are going to import few different libraries for the project that are important for this project. The first library we need is **ggplot2**, this library is a powerful data visualization tool which is going to be very useful to illustrate our data analysis.The other library is **tidyverse** which will help to manipulate and visualize the data. **plotly** is used for interactive plots and **ggpubr** is to combining multiple plots into one figure and finally **reshape2** is used for reshaping data.
+
+*make sure to install the above packages before running the project*
+
+to install packages use the below command:
+
+*install.packages(c("ggplot2","plotly","zoo","reshape2","tidyverse","scales","lubridate")) in your R consol.*
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(plotly)
+library(tidyverse)
+library(reshape2)
+library(zoo)
+library(lubridate)
+library(scales)
+```
+
+
+**Data overview**
+This section will give a good introduction about the data we are going to work with.
+
+**Data summary**
+
+We analyzed COVID-19 data for selected countries like Canada, The United States and the United Kingdom. Here are some of the key findings:
+
+- The United States has the highest total number of COVID-19 cases and deaths between the selected countries, the second country is the United Kingdom and next is Canada.
+
+- The daily number of COVID cases and deaths have differ over time for all countries, with peaks in late 2020 and early 2021.
+
+- The United Kingdom has the highest percentage of its population fully vaccinated, followed by the United States and Canada.
+
+- The United Kingdom has conducted the highest number od test per thousand poeple, followed by the United States and Canada.
+
+
+```{r, echo=TRUE,message=FALSE, warning=FALSE}
+
+# Filter for data for selected countries
+countries <- c("United Kingdom", "United States", "Canada")
+selected_data <- my_data %>% 
+  filter(location %in% countries) %>% 
+  select(location, date, total_cases, new_cases, total_deaths, new_deaths, people_fully_vaccinated_per_hundred, total_tests_per_thousand) %>% 
+  mutate(date = as.Date(date))
+
+# Calculate summary statistics
+data_summary <- selected_data %>% 
+  group_by(location) %>% 
+  summarize(total_cases = max(total_cases, na.rm = TRUE),
+            total_deaths = max(total_deaths, na.rm = TRUE),
+            max_daily_cases = max(new_cases, na.rm = TRUE),
+            max_daily_deaths = max(new_deaths, na.rm = TRUE),
+            fully_vaccinated = max(people_fully_vaccinated_per_hundred, na.rm = TRUE),
+            tests_per_thousand = max(total_tests_per_thousand, na.rm = TRUE))
+
+data_summary
+```
+
+
+**Overview of COVID cases and Deaths**
+
+- We analyzed his COVID-19 data for several countries including the UK, US and Canada. As of March 2023, the total number of his confirmed COVID-19 cases worldwide has exceeded 500 million, with over 6 million deaths.
+
+- Among the selected countries, the United States has reported the highest total number of her COVID-19 cases and deaths. As of March 2023, more than 120 million cases and her 2.4 million deaths have been reported in the United States. The UK has reported over 10 million cases and 150,000 deaths, while Canada has reported over 4 million cases and 50,000 deaths. The number of COVID-19 cases and deaths per day has fluctuated over time in all countries, peaking in late 2020 and early 2021. Distribution of Delta variants. Similarly, from winter 2020 to his early 2021, the UK also saw an increase in cases and deaths attributed to delta.
+
+- It is important to note that the number of reported cases and deaths may not reflect the true extent of the COVID-19 pandemic, as testing capacity and reporting procedures vary by country. In addition, some countries may underreport cases and deaths due to limited testing and medical resources. Efforts to combat the COVID-19 pandemic include vaccination campaigns, social distancing and increased testing capacity. Vaccine availability and distribution varied by country, with the United Kingdom topping the list of countries selected in terms of percentage of the fully vaccinated population. 
+
+
+```{r,echo=TRUE,message=FALSE, warning=FALSE}
+# Total COVID-19 cases and deaths by country
+total_cases <- my_data %>% 
+  group_by(location) %>% 
+  summarize(total_cases = max(total_cases))
+
+total_deaths <- my_data %>% 
+  group_by(location) %>% 
+  summarize(total_deaths = max(total_deaths))
+
+# Plot total cases and deaths over time
+ggplot(selected_data, aes(x = date, y = total_cases, color = location)) + 
+  geom_line(size = 1) +
+  labs(title = "Total COVID-19 Cases Over Time",
+       x = "Date",
+       y = "Total Cases",
+       color = "Country") +
+  scale_x_date(date_labels = "%b %Y") +
+  theme_minimal()
+
+ggplot(selected_data, aes(x = date, y = total_deaths, color = location)) + 
+  geom_line(size = 1) +
+  labs(title = "Total COVID-19 Deaths Over Time",
+       x = "Date",
+       y = "Total Deaths",
+       color = "Country") +
+  scale_x_date(date_labels = "%b %Y") +
+  theme_minimal()
+
+```
+
+
+**Daily COVID Cases and Deaths**
+
+The code below produces two graphs showing daily COVID-19 cases and deaths for the UK, US, and Canada. This code filters the data for these three countries, selects the relevant columns (location, date, new_cases, and new_deaths) to calculate her 7-day moving average of new cases and new deaths . Next, use ggplot2 to create a bar chart of the daily number of new infections and new deaths, and a dashed line for the 7-day moving average.
+
+Looking at the graph, we can see that in early 2021, new cases and deaths increased sharply in all three countries. This is probably due to the emergence of more contagious variants of the virus. The United States has the highest number of daily new infections and deaths, followed by the United Kingdom and Canada. However, all three countries have seen a decline in cases and deaths since their peak in January 2021. The chart also shows the impact of vaccination efforts, as the number of cases and deaths has fallen concurrently with the roll out of vaccines in these countries.
+
+Overall, the code allows you to quickly visualize and compare daily COVID-19 cases and deaths across multiple countries to gain insight into the evolution of the pandemic and the effectiveness of public health interventions. 
+
+```{r,echo=TRUE,message=FALSE, warning=FALSE}
+# Calculate 7-day moving average for new cases and new deaths
+selected_data <- selected_data %>% 
+  group_by(location) %>% 
+  mutate(avg_new_cases = rollmeanr(new_cases, k = 7, fill = NA),
+         avg_new_deaths = rollmeanr(new_deaths, k = 7, fill = NA, align = "right"))
+
+# Plot daily new cases and new deaths over time
+ggplot(selected_data, aes(x = date, y = new_cases, color = location)) + 
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_line(aes(y = avg_new_cases), size = 1, linetype = "dashed") +
+  labs(title = "Daily COVID-19 Cases",
+       x = "Date",
+       y = "New Cases",
+       color = "Country") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(selected_data, aes(x = date, y = new_deaths, color = location)) + 
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_line(aes(y = avg_new_deaths), size = 1, linetype = "dashed") +
+  labs(title = "Daily COVID-19 Deaths",
+       x = "Date",
+       y = "New Deaths",
+       color = "Country") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+**COVID-19 Total Vaccination **
+
+The graph provided shows the total number of COVID-19 administered over time. The x-axis represents the date, while the y-axis represents the total number of vaccinations administered worldwide.
+
+The graph provides a clear visual representation of the global vaccination effort against COVID-19. It highlights the progress that has been made in vaccinating millions of people around the world and the rapid increase in vaccinations over time. However, the graph also underscores the ongoing challenges in ensuring equitable access to vaccines and the need for continued global cooperation to end the pandemic.
+
+```{r,echo=TRUE,message=FALSE, warning=FALSE}
+# Convert date column to date format
+vaccination_data$date <- as.Date(vaccination_data$date)
+
+# Plot total vaccinations over time
+total_vaccinations <- vaccination_data %>%
+  group_by(date) %>%
+  summarize(total_vaccinations = sum(total_vaccinations, na.rm = TRUE))
+
+ggplot(total_vaccinations, aes(x = date, y = total_vaccinations)) +
+  geom_line(size = 1.5, color = "blue") +
+  labs(title = "Total COVID-19 Vaccinations", x = "Date", y = "Number of Vaccinations") +
+  scale_y_continuous(labels = comma) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+
+
+**COVID-19 Daily Vacination**
+
+The graph provided by the code shows the daily number of COVID-19 vaccinations administered over time. The x-axis represents the date, while the y-axis represents the number of vaccinations administered each day worldwide.
+
+The graph provides an important perspective on the pace of the global vaccination effort against COVID-19. It highlights the significant progress that has been made in administering millions of vaccinations each day, but also underscores the ongoing challenges in ensuring equitable access to vaccines and the need for continued global cooperation to end the pandemic.
+
+
+```{r,echo=TRUE,message=FALSE, warning=FALSE}
+# Plot daily vaccinations
+daily_vaccinations <- vaccination_data %>%
+  group_by(date) %>%
+  summarize(daily_vaccinations = sum(daily_vaccinations, na.rm = TRUE))
+
+ggplot(daily_vaccinations, aes(x = date, y = daily_vaccinations)) +
+  geom_line(size = 1.5, color = "blue") +
+  labs(title = "Daily COVID-19 Vaccinations", x = "Date", y = "Number of Vaccinations") +
+  scale_y_continuous(labels = comma) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+**Total COVID-19 Vacination By Country**
+
+The graph provided by the code shows the total number of COVID-19 vaccinations administered by the top 10 countries in the world. The x-axis represents the countries, ordered by the total number of vaccinations administered, while the y-axis represents the total number of vaccinations administered in millions.
+
+The graph provides important insights into the global vaccination effort against COVID-19 and the varying levels of progress made by different countries. It underscores the need for continued global cooperation and equitable access to vaccines to end the pandemic.
+
+
+```{r,echo=TRUE,message=FALSE, warning=FALSE}
+# Convert date column to Date format
+vaccination_data$date <- ymd(vaccination_data$date)
+
+# Filter out rows with missing total vaccinations data
+vaccination_data <- vaccination_data %>%
+  filter(!is.na(total_vaccinations))
+
+# Plot total vaccinations by country
+top_countries <- vaccination_data %>%
+  group_by(location) %>%
+  summarize(total_vaccinations = max(total_vaccinations, na.rm = TRUE)) %>%
+  ungroup() %>%
+  top_n(10)
+
+ggplot(top_countries, aes(x = fct_reorder(location, total_vaccinations), y = total_vaccinations)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Total COVID-19 Vaccinations by Country", x = "Country", y = "Number of Vaccinations") +
+  scale_y_continuous(labels = comma) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+**COVID-19 Vaccinations By Manufacturer And Country**
+
+The graph shows the total number of COVID-19 vaccine doses administered by vaccine manufacturer and country for the top 10 countries in terms of total doses. The x-axis shows the countries, and the y-axis shows the total number of doses administered in millions. The bars are color-coded by the vaccine manufacturer.
+
+The graph provides a useful overview of the distribution of COVID-19 vaccines by manufacturer and country for the top 10 countries in terms of total doses. It highlights the differences in vaccine usage across countries and can help inform policy decisions related to vaccine procurement and distribution.
+
+
+```{r,echo=TRUE,message=FALSE, warning=FALSE}
+
+# Load data
+vaccine_manufacturer_data <- read.csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations-by-manufacturer.csv")
+
+# Calculate total doses by manufacturer and location
+total_doses_by_manufacturer <- vaccine_manufacturer_data %>%
+  group_by(location, vaccine) %>%
+  summarize(total_doses = sum(total_vaccinations)) %>%
+  ungroup() %>%
+  mutate(total_doses_millions = total_doses / 1000000)
+
+# Select top 10 countries by total doses
+top_10_countries <- total_doses_by_manufacturer %>%
+  group_by(location) %>%
+  summarize(total_doses = sum(total_doses_millions)) %>%
+  top_n(10)
+
+# Filter data to only include top 10 countries
+total_doses_top_10 <- total_doses_by_manufacturer %>%
+  filter(location %in% top_10_countries$location)
+
+# Plot total doses by manufacturer and location for top 10 countries
+ggplot(total_doses_top_10, aes(x = fct_reorder(location, total_doses_millions), y = total_doses_millions, fill = vaccine)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "COVID-19 Vaccinations by Manufacturer and Country (Top 10)", x = "Country", y = "Number of Doses (millions)", fill = "Vaccine") +
+  scale_y_continuous(labels = comma) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
